@@ -1,9 +1,16 @@
 package com.example.list_images
 
+import android.app.Activity
+import android.content.Intent
+import android.graphics.Bitmap
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.ImageView
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -32,19 +39,23 @@ class MainActivity : AppCompatActivity() {
         "https://images.unsplash.com/photo-1475823678248-624fc6f85785"
     );
 
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d("", "onDestroy")
-    }
 
-    override fun onPause() {
-        super.onPause()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
+        binding.fabCamera.setOnClickListener({
+            val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            val image  = startActivityForResult(takePictureIntent, 1)
+        })
 
         setImage(listImage[0])
         binding.btnNext.setOnClickListener() {
@@ -60,11 +71,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+            val thumbnail: Bitmap = data?.getParcelableExtra("data")!!
+            Glide.with(this)
+                .load(thumbnail)
+                .apply(RequestOptions.skipMemoryCacheOf(true))
+                .apply(RequestOptions.diskCacheStrategyOf(DiskCacheStrategy.NONE))
+                .into(binding.image)
+        }
+    }
+
     private fun setImage(image: String) {
         Glide.with(this)
             .load(image)
             .apply(RequestOptions.skipMemoryCacheOf(true))
             .apply(RequestOptions.diskCacheStrategyOf(DiskCacheStrategy.NONE))
             .into(binding.image)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("", "onDestroy")
+    }
+
+    override fun onPause() {
+        super.onPause()
     }
 }
